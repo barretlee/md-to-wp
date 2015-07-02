@@ -1,17 +1,17 @@
 <?php
 
 /**
-* md-to-wp
-* imports markdown blog posts to wordpress
-* 
-* @author jenn schiffer
-* @url http://github.com/jennschiffer/md-to-wp
-*/
+ * md-to-wp
+ * imports markdown blog posts to wordpress
+ *
+ * @author jenn schiffer
+ * @url http://github.com/jennschiffer/md-to-wp
+ */
 
 // require these files to use wordpress things
 define('WP_USE_THEMES', false);
-require_once (dirname (dirname (__FILE__)) . '/wp-blog-header.php');
-require_once (dirname (dirname (__FILE__)) . '/wp-includes/registration.php');
+require_once (dirname(dirname(__FILE__)) . '/wp-blog-header.php');
+require_once (dirname(dirname(__FILE__)) . '/wp-includes/registration.php');
 
 // in which directory are the markdown posts
 $mdDir = '/posts-to-import';
@@ -60,17 +60,17 @@ function parseDate($date) {
 function parseTitle($title) {
   // remove the label
   $newTitle = trim(substr($title, 6, strlen($title)-6));
-  
+
   // remove any quotes
   if ( substr($newTitle, 0, 1) === "'" ) {
     $quotedTitle = strstr($newTitle, "'");
     $newTitle = substr($quotedTitle, 1, strlen($quotedTitle)-2);
   }
   else if ( substr($newTitle, 0, 1) === '"' ) {
-    $quotedTitle = strstr($newTitle, '"');
-    $newTitle = substr($quotedTitle, 1, strlen($quotedTitle)-2);
-  }
-  
+      $quotedTitle = strstr($newTitle, '"');
+      $newTitle = substr($quotedTitle, 1, strlen($quotedTitle)-2);
+    }
+
   return $newTitle;
 }
 
@@ -81,19 +81,19 @@ function parseTitle($title) {
 * @return integer
 */
 function parseAuthor($author) {
-  global $email; 
-  
+  global $email;
+
   // remove hyphens and quotes
   $author = str_replace('-', ' ', $author);
   $author = str_replace("'", '', $author);
   $author = str_replace('"', '', $author);
-  
+
   // if there are dupe authors, create error author for fixing later
   if ( strstr($author, ',') ){
     $author = 'MULTIPLE AUTHORS';
     echo '[MULTIPLE AUTHORS] ';
   }
-  
+
   $existingUser = get_user_by('login', $author);
 
   // get existing user id or create new user and get its id
@@ -102,7 +102,7 @@ function parseAuthor($author) {
   }
   else {
     $nameParts = explode(' ', $author);
-    
+
     // make sure no dupe emails are attempted, add last names to them if a dupe
     $existingEmail = get_user_by('email', $nameParts[0] . '@' . $email);
     if ( $existingEmail ) {
@@ -111,10 +111,10 @@ function parseAuthor($author) {
     else {
       $userEmail = $nameParts[0] . '@' . $email;
     }
-    
+
     $authorId = wp_create_user($author, 'password', $userEmail);
   }
-  
+
   // return user id
   return $authorId;
 }
@@ -133,22 +133,22 @@ function parseTaxonomy($linesArray, $index) {
 
   // check if current index starts with 'category' to be sure
   $thisLine = explode(':', $linesArray[$index]);
-  
+
   if ($thisLine[0] === 'category') {
     $isTaxonomyList = true;
-    
+
     // go through next lines to check if they start with - and if so strip whitespace and push category to array
     while ($isTaxonomyList) {
       $index++;
-      
+
       if (substr(trim($linesArray[$index]),0,2) === '- ') {
-        array_push($arrayTaxonomies, substr(trim($linesArray[$index]),2, strlen(trim($linesArray[$index])) - 2 )); 
+        array_push($arrayTaxonomies, substr(trim($linesArray[$index]),2, strlen(trim($linesArray[$index])) - 2 ));
       }
       else {
         $isTaxonomyList = false;
-      }    
+      }
     }
-    
+
     return $arrayTaxonomies;
   }
 }
@@ -162,20 +162,20 @@ function parseTaxonomy($linesArray, $index) {
 function importBlogPost($file, $mysqli) {
   $content = file_get_contents($file);
   $lines = explode("\n", $content);
-  
-  $bodyArray = [];  
+
+  $bodyArray = [];
   $isBody = false;
   $metaStarted = false;
-    
+
   // parse each line for meta and then body
   for ($i = 0; $i <= sizeof($lines); $i++) {
     $thisLine = $lines[$i];
-    
+
     if ($isBody === false) {
       // if line starts with --, meta has begun or ended
       if (substr($thisLine, 0, 2) === '--') {
         if ($metaStarted) {
-          $isBody = true; 
+          $isBody = true;
         }
         else {
           $metaStarted = true;
@@ -183,39 +183,39 @@ function importBlogPost($file, $mysqli) {
       }
       else {
         $meta = explode(':', $thisLine);
-        
+
         switch ($meta[0]) {
-          case 'author':
-            $author = parseAuthor(trim(strtolower($meta[1])));
-            break;
-          case 'date':
-            $date = parseDate($thisLine);
-            break;
-          case 'slug':
-            $slug = $meta[1];
-            break;
-          case 'title':
-            $title = parseTitle($thisLine);
-            break;
-          case 'status':
-            $status = $meta[1];
-            break;
-          case 'category':
-            $category = parseTaxonomy($lines, $i);
-            break;
-          default:
-            break;
-        } 
+        case 'author':
+          $author = parseAuthor(trim(strtolower($meta[1])));
+          break;
+        case 'date':
+          $date = parseDate($thisLine);
+          break;
+        case 'slug':
+          $slug = $meta[1];
+          break;
+        case 'title':
+          $title = parseTitle($thisLine);
+          break;
+        case 'status':
+          $status = $meta[1];
+          break;
+        case 'category':
+          $category = parseTaxonomy($lines, $i);
+          break;
+        default:
+          break;
+        }
       }
     }
     else {
       array_push($bodyArray, $thisLine);
     }
   }
-  
+
   $body_md = implode("\n", $bodyArray);
   $body_html = Markdown($body_md);
-  
+
   $postToImport = array(
     'post_content'          => $body_html,
     'post_name'             => $slug,
@@ -225,8 +225,8 @@ function importBlogPost($file, $mysqli) {
     'post_content_filtered' => $body_md,
     'post_date'             => $date,
     'tags_input'            => $category,
-  );  
-    
+  );
+
   // insert the post into the database!
   $imported = wp_insert_post($postToImport);
 
@@ -236,5 +236,5 @@ function importBlogPost($file, $mysqli) {
   else {
     echo 'Successful Import: ' . $postToImport[post_title] . '<br />';
   }
-  
+
 }
