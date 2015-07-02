@@ -19,6 +19,10 @@ $mdDir = '/posts-to-import';
 // user import email domain (will do their first name @ $email)
 $email = 'bocoup.com';
 
+// script page header
+echo '<h1>~*markdown to wordpress*~</h1>';
+echo '<h2>good luck! xoxo jenn</h2>';
+
 // require markdown extra if it hasn't been activated in a plugin like wp-markdown already
 if ( !class_exists('Markdown_Parser')) {
   require('markdown-extra.php');
@@ -33,7 +37,6 @@ foreach ($dir as $fileInfo) {
     importBlogPost($fileInfo->getPathname(), $mysqli);
   }
 }
-
 
 /*
 * parses date line
@@ -84,7 +87,14 @@ function parseAuthor($author) {
   $author = str_replace('-', ' ', $author);
   $author = str_replace("'", '', $author);
   $author = str_replace('"', '', $author);
-    $existingUser = get_user_by('login', $author);
+  
+  // if there are dupe authors, create error author for fixing later
+  if ( strstr($author, ',') ){
+    $author = 'MULTIPLE AUTHORS';
+    echo '[MULTIPLE AUTHORS] ';
+  }
+  
+  $existingUser = get_user_by('login', $author);
 
   // get existing user id or create new user and get its id
   if ( $existingUser ) {
@@ -92,7 +102,17 @@ function parseAuthor($author) {
   }
   else {
     $nameParts = explode(' ', $author);
-    $authorId = wp_create_user($author, 'password', $nameParts[0] . '@' . $email);
+    
+    // make sure no dupe emails are attempted, add last names to them if a dupe
+    $existingEmail = get_user_by('email', $nameParts[0] . '@' . $email);
+    if ( $existingEmail ) {
+      $userEmail = $nameParts[0] . $nameParts[1] . '@' . $email;
+    }
+    else {
+      $userEmail = $nameParts[0] . '@' . $email;
+    }
+    
+    $authorId = wp_create_user($author, 'password', $userEmail);
   }
   
   // return user id
@@ -209,12 +229,12 @@ function importBlogPost($file, $mysqli) {
     
   // insert the post into the database!
   $imported = wp_insert_post($postToImport);
-  
+
   if ( $imported === 0 ) {
-    echo '<b style="color:red;">FAILED: ' . $postToImport[post_title] . '</b><br />';
+    echo '<b style="color:red;">IMPORT FAILED: ' . $postToImport[post_title] . '</b><br />';
   }
   else {
-    echo 'Success: ' . $postToImport[post_title] . '<br />';
+    echo 'Successful Import: ' . $postToImport[post_title] . '<br />';
   }
   
 }
