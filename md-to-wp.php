@@ -34,7 +34,7 @@ $dir = new DirectoryIterator(dirname(__FILE__) . $mdDir);
 // for each .md or .markdown file, import into db
 foreach ($dir as $fileInfo) {
   if (!$fileInfo->isDot() && $fileInfo->isReadable() && (strtolower($fileInfo->getExtension()) === 'md' || strtolower($fileInfo->getExtension()) === 'markdown')) {
-    importBlogPost($fileInfo->getPathname(), $mysqli);
+    importBlogPost($fileInfo->getPathname());
   }
 }
 
@@ -159,7 +159,7 @@ function parseTaxonomy($linesArray, $index) {
 * @param file $file
 * @param mysqli $mysqli
 */
-function importBlogPost($file, $mysqli) {
+function importBlogPost($file) {
   $content = file_get_contents($file);
   $lines = explode("\n", $content);
 
