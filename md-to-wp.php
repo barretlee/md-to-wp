@@ -157,7 +157,6 @@ function parseTaxonomy($linesArray, $index) {
 * converts markdown post to wordpress ready blog and inserts post
 *
 * @param file $file
-* @param mysqli $mysqli
 */
 function importBlogPost($file) {
   $content = file_get_contents($file);
